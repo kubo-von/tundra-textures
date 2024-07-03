@@ -1,0 +1,24 @@
+[package]
+name = "tundra-textures"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "tundra_textures"
+path = "src/lib.rs"
+
+[dependencies]
+peak_alloc = "0.2.1"
+exr = "1.72.0"
+glam = {version = "0.25", features = ["scalar-math"]}
+half = "2.4.1"
+hashbrown = "0.14.5"
+itertools = "0.13.0"
+rand = "0.8.5"
+
+
+[dev-dependencies]
+minifb = "0.27.0"
+threadpool = "1.8.1"
+rand = "0.8.5"
