@@ -3,12 +3,13 @@
 // ./maketx --format exr /media/jakubvondra/Data/dev/muskox/tests/grid.exr
 // cargo run --release --example load
 
-use exr;
+pub use exr;
 use exr::math::Vec2;
 use glam;
 use hashbrown::HashMap;
 use std::sync::{Arc, RwLock};
 
+mod txmake;
 mod utils;
 
 pub fn add(left: usize, right: usize) -> usize {
@@ -25,10 +26,26 @@ impl TextureCache {
         }
     }
     pub fn add(&mut self, texture_path: String) {
-        &self.textures.insert(
-            texture_path.clone(),
-            Arc::new(RwLock::new(Texture::new(texture_path))),
-        );
+        let mut texture_paths: Vec<String> = Vec::new();
+        if texture_path.contains("<") {
+            let pattern = utils::tags_to_pattern(texture_path);
+            let mut matching = utils::list_files_by_pattern(pattern);
+            texture_paths.append(&mut matching);
+        } else {
+            texture_paths.push(texture_path)
+        }
+
+        for p in texture_paths.iter() {
+            let tx_path = match p.ends_with(".tx") {
+                true => p.clone(),
+                false => txmake::maketx(p.clone()),
+            };
+
+            &self.textures.insert(
+                tx_path.clone(),
+                Arc::new(RwLock::new(Texture::new(tx_path))),
+            );
+        }
     }
 }
 
@@ -41,7 +58,7 @@ impl Texture {
     pub fn new(file_path: String) -> Self {
         let metadata = exr::meta::MetaData::read_from_file(file_path.clone(), false)
             .expect(format!("could not read metadata from {:?}", file_path).as_str());
-        println!("{:?}", metadata.headers[0].layer_size);
+        //println!("{:?}", metadata.headers[0].layer_size);
         //println!("{:?}",metadata.headers[0].channels);
 
         let resolution = metadata.headers[0].layer_size;
@@ -49,7 +66,7 @@ impl Texture {
         let mipmaps = exr::meta::mip_map_levels(exr::math::RoundingMode::Down, resolution)
             .map(|m| MipMap::empty(m.1))
             .collect();
-
+        println!("added to texture cache: {:?}", &file_path);
         Texture {
             path: file_path,
             resolution: (resolution.0, resolution.1),
@@ -135,6 +152,7 @@ impl Texture {
             .as_ref()
             .expect("trying to read tile that is not loaded yet")
             .pixels;
+
         glam::Vec4::new(
             pixel_values[tile_pixel_index * 4],
             pixel_values[tile_pixel_index * 4 + 1],
@@ -163,7 +181,7 @@ impl MipMap {
 
         let tiles = (0..n_tiles).map(|tile_i| None).collect();
 
-        println!("mimap {:?} - {:?} tiles", resolution, n_tiles);
+        //println!("mimap {:?} - {:?} tiles", resolution, n_tiles);
 
         MipMap {
             resolution: resolution,
