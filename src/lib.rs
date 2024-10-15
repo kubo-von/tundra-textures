@@ -10,7 +10,7 @@ use hashbrown::HashMap;
 use std::sync::{Arc, RwLock};
 
 mod txmake;
-mod utils;
+pub mod utils;
 
 pub fn add(left: usize, right: usize) -> usize {
     left + right
@@ -25,7 +25,7 @@ impl TextureCache {
             textures: HashMap::new(),
         }
     }
-    pub fn add(&mut self, texture_path: String) {
+    pub fn add(&mut self, texture_path: String, source_cs: &utils::ColorSpace, force_maketx: bool) {
         let mut texture_paths: Vec<String> = Vec::new();
         if texture_path.contains("<") {
             let pattern = utils::tags_to_pattern(texture_path);
@@ -38,7 +38,7 @@ impl TextureCache {
         for p in texture_paths.iter() {
             let tx_path = match p.ends_with(".tx") {
                 true => p.clone(),
-                false => txmake::maketx(p.clone()),
+                false => txmake::maketx(p.clone(), &source_cs, force_maketx),
             };
 
             &self.textures.insert(

@@ -16,7 +16,7 @@ pub fn main() {
     //let texture_path = "/media/jakubvondra/Data/dev/test_data/exrs/mipmap/debug.tx";
 
     let mut cache = tundra_textures::TextureCache::empty();
-    cache.add(texture_path.to_string());
+    cache.add(texture_path.to_string(), &utils::ColorSpace::Srgb);
 
     let test_texture_arc = cache.textures.get(texture_path).unwrap().clone();
     let test_texture_arc_clone = test_texture_arc.clone();

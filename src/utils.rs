@@ -3,7 +3,7 @@ extern crate rand;
 
 use exr::block::reader::ChunksReader;
 use exr::math::Vec2;
-use std::fs::File;
+use std::fs::{metadata, File};
 use std::io::BufReader;
 use std::path::Path;
 
@@ -198,4 +198,19 @@ pub fn list_files_by_pattern(pattern: String) -> Vec<String> {
         }
     }
     out
+}
+
+pub enum ColorSpace {
+    Srgb,
+    Raw,
+}
+
+pub fn is_file_newer(file1: String, file2: String) -> bool {
+    let metadata1 = metadata(Path::new(&file1)).expect("could not get file metadata");
+    let metadata2 = metadata(Path::new(&file2)).expect("could not get file metadata");
+
+    let modified1 = metadata1.modified().expect("could not get file metadata");
+    let modified2 = metadata2.modified().expect("could not get file metadata");
+
+    modified1 > modified2
 }

@@ -10,13 +10,23 @@ use smallvec::smallvec;
 use std::fs::File;
 use std::path::Path;
 
+use crate::utils;
+
 // exr imports
 extern crate exr;
 
-pub fn maketx(filepath: String) -> String {
+pub fn maketx(filepath: String, source_cs: &utils::ColorSpace, force: bool) -> String {
     println!("creating");
     let filepath_tx = format!("{}{}", &filepath[0..filepath.rfind(".").unwrap()], ".tx");
     println!("creating {:?}", &filepath_tx);
+
+    if (Path::new(&filepath_tx).is_file()
+        && utils::is_file_newer(filepath_tx.clone(), filepath.clone())
+        && !force)
+    {
+        println!("tx already up to date, skipping {:?}", &filepath_tx);
+        return filepath_tx;
+    }
 
     let img = image::open(&Path::new(filepath.as_str())).expect("could not read iamge file");
 
@@ -51,16 +61,23 @@ pub fn maketx(filepath: String) -> String {
         let mut g: Vec<f32> = Vec::with_capacity(rgb_f32.len() / 3);
         let mut b: Vec<f32> = Vec::with_capacity(rgb_f32.len() / 3);
 
-        for rgb in rgb_f32.chunks(3) {
-            r.push(srgb_to_linear(rgb[0]));
-            g.push(srgb_to_linear(rgb[1]));
-            b.push(srgb_to_linear(rgb[2]));
+        match source_cs {
+            utils::ColorSpace::Srgb => {
+                for rgb in rgb_f32.chunks(3) {
+                    r.push(srgb_to_linear(rgb[0]) / 10.0);
+                    g.push(srgb_to_linear(rgb[1]) / 10.0);
+                    b.push(srgb_to_linear(rgb[2]) / 10.0);
+                }
+            }
+            // Raw not sure why the values come out in range 0.0 - 10.0 but have to deal with it
+            _ => {
+                for rgb in rgb_f32.chunks(3) {
+                    r.push(rgb[0] / 10.0);
+                    g.push(rgb[1] / 10.0);
+                    b.push(rgb[2] / 10.0);
+                }
+            }
         }
-        // for rgb in rgb_f32.chunks(3) {
-        //     r.push(rgb[0]);
-        //     g.push(rgb[1]);
-        //     b.push(rgb[2]);
-        // }
         red_mip_levels.push(FlatSamples::F32(r));
         green_mip_levels.push(FlatSamples::F32(g));
         blue_mip_levels.push(FlatSamples::F32(b));
@@ -116,3 +133,7 @@ fn srgb_to_linear(c_srgb: f32) -> f32 {
         ((c_srgb + 0.055) / 1.055).powf(2.4)
     }
 }
+
+// fn srgb_to_linear(c_srgb: f32) -> f32 {
+//     c_srgb.powf(2.2)
+// }
